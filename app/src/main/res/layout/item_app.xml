@@ -3,12 +3,14 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_horizontal"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:paddingTop="2dp"
+    android:stateListAnimator="@animator/press_scale">
 
     <ImageView
         android:id="@+id/icon"
-        android:layout_width="54dp"
-        android:layout_height="54dp"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
         android:scaleType="fitCenter" />
 
     <TextView
@@ -16,11 +18,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
+        android:paddingLeft="2dp"
+        android:paddingRight="2dp"
         android:gravity="center"
         android:maxLines="1"
         android:ellipsize="end"
         android:textColor="@color/text"
         android:textSize="12sp"
-        android:shadowColor="#CC000000"
-        android:shadowRadius="4" />
+        android:shadowColor="#FF000000"
+        android:shadowDy="1"
+        android:shadowRadius="6" />
 </LinearLayout>
