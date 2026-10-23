@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp"
+    android:paddingTop="24dp">
+
+    <!-- Encabezado: reloj, fecha y batería -->
+    <LinearLayout
+        android:id="@+id/header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_panel"
+        android:padding="20dp">
+
+        <TextClock
+            android:id="@+id/clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:format24Hour="HH:mm"
+            android:format12Hour="HH:mm"
+            android:textColor="@color/accent"
+            android:textSize="72sp"
+            android:fontFamily="sans-serif-thin"
+            android:shadowColor="@color/accent"
+            android:shadowRadius="18" />
+
+        <TextClock
+            android:id="@+id/date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:format24Hour="EEEE d 'de' MMMM"
+            android:format12Hour="EEEE d 'de' MMMM"
+            android:textColor="@color/text"
+            android:textSize="18sp"
+            android:textAllCaps="true"
+            android:letterSpacing="0.12" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/batteryText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text"
+                android:textSize="14sp"
+                android:fontFamily="monospace"
+                android:minWidth="96dp" />
+
+            <ProgressBar
+                android:id="@+id/batteryBar"
+                style="@android:style/Widget.Material.ProgressBar.Horizontal"
+                android:layout_width="0dp"
+                android:layout_height="8dp"
+                android:layout_weight="1"
+                android:max="100"
+                android:progressTint="@color/accent"
+                android:progressBackgroundTint="#33FFFFFF" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Buscador -->
+    <EditText
+        android:id="@+id/search"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_panel"
+        android:hint="Buscar app…"
+        android:textColorHint="@color/text_dim"
+        android:textColor="@color/text"
+        android:paddingLeft="18dp"
+        android:paddingRight="18dp"
+        android:singleLine="true"
+        android:imeOptions="actionGo"
+        android:inputType="text" />
+
+    <!-- Cajón de apps -->
+    <GridView
+        android:id="@+id/grid"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="16dp"
+        android:numColumns="4"
+        android:verticalSpacing="18dp"
+        android:horizontalSpacing="8dp"
+        android:stretchMode="columnWidth"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp"
+        android:scrollbars="none" />
+</LinearLayout>
