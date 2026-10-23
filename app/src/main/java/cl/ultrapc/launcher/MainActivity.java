@@ -57,6 +57,8 @@ public class MainActivity extends Activity {
     private static final int DOCK_MAX = 5;
     private static final String PREFS = "launcher";
     private static final String KEY_DOCK = "dock";
+    private static final String KEY_CATEGORY = "category";
+    private static final String KEY_CAT_PREFIX = "cat:";
 
     private final List<AppEntry> allApps = new ArrayList<>();
     private final List<AppEntry> shownApps = new ArrayList<>();
@@ -71,6 +73,11 @@ public class MainActivity extends Activity {
     private LinearLayout dockView;
     private View dockHint;
     private View clear;
+    private TextView drawerTitle;
+    private LinearLayout chips;
+    private View chipsScroll;
+    private View drawer;
+    private String currentCategory = Categories.ALL;
     private GestureDetector gestures;
 
     private final BroadcastReceiver batteryReceiver = new BroadcastReceiver() {
@@ -121,6 +128,11 @@ public class MainActivity extends Activity {
         dockView = findViewById(R.id.dock);
         dockHint = findViewById(R.id.dockHint);
         clear = findViewById(R.id.clear);
+        drawerTitle = findViewById(R.id.drawerTitle);
+        chips = findViewById(R.id.chips);
+        chipsScroll = findViewById(R.id.chipsScroll);
+        drawer = findViewById(R.id.drawer);
+        currentCategory = getSharedPreferences(PREFS, MODE_PRIVATE).getString(KEY_CATEGORY, Categories.ALL);
 
         adapter = new AppAdapter();
         grid.setAdapter(adapter);
@@ -166,12 +178,19 @@ public class MainActivity extends Activity {
             return true;
         });
 
-        // Deslizar hacia abajo (con el cajón arriba del todo) abre las notificaciones
+        // Deslizar hacia abajo (con el cajón arriba del todo) abre las notificaciones;
+        // a los lados sobre el cajón cambia de categoría
         gestures = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float vx, float vy) {
                 if (e1 == null) return false;
+                float dx = e2.getX() - e1.getX();
                 float dy = e2.getY() - e1.getY();
+                if (Math.abs(dx) > 150 && Math.abs(vx) > Math.abs(vy) * 1.5f
+                        && search.length() == 0 && isOver(grid, e1)) {
+                    stepCategory(dx < 0 ? 1 : -1);
+                    return true;
+                }
                 if (dy > 150 && Math.abs(vy) > Math.abs(vx) && !grid.canScrollVertically(-1)) {
                     expandNotifications();
                     return true;
@@ -265,15 +284,19 @@ public class MainActivity extends Activity {
 
     private void loadApps() {
         LauncherApps launcherApps = (LauncherApps) getSystemService(LAUNCHER_APPS_SERVICE);
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         allApps.clear();
         for (UserHandle user : launcherApps.getProfiles()) {
             for (LauncherActivityInfo info : launcherApps.getActivityList(null, user)) {
                 if (info.getComponentName().getPackageName().equals(getPackageName())) continue;
-                allApps.add(new AppEntry(info));
+                AppEntry app = new AppEntry(info);
+                // La categoría elegida a mano tiene prioridad sobre la automática
+                app.category = prefs.getString(KEY_CAT_PREFIX + app.id, Categories.classify(info.getApplicationInfo()));
+                allApps.add(app);
             }
         }
         Collections.sort(allApps, (a, b) -> a.key.compareTo(b.key));
-        count.setText(String.valueOf(allApps.size()));
+        renderChips();
         filter(search.getText().toString());
         renderDock();
     }
@@ -281,14 +304,101 @@ public class MainActivity extends Activity {
     private void filter(String query) {
         String q = normalize(query);
         shownApps.clear();
-        // Primero las que empiezan con lo buscado, después las que lo contienen
-        List<AppEntry> contains = new ArrayList<>();
-        for (AppEntry app : allApps) {
-            if (q.isEmpty() || app.key.startsWith(q)) shownApps.add(app);
-            else if (app.key.contains(q)) contains.add(app);
+        if (q.isEmpty()) {
+            for (AppEntry app : allApps) {
+                if (Categories.ALL.equals(currentCategory) || app.category.equals(currentCategory)) shownApps.add(app);
+            }
+        } else {
+            // La búsqueda ignora la categoría: primero las que empiezan con lo buscado, después las que lo contienen
+            List<AppEntry> contains = new ArrayList<>();
+            for (AppEntry app : allApps) {
+                if (app.key.startsWith(q)) shownApps.add(app);
+                else if (app.key.contains(q)) contains.add(app);
+            }
+            shownApps.addAll(contains);
         }
-        shownApps.addAll(contains);
+        drawerTitle.setText(q.isEmpty() ? Categories.title(currentCategory) : "Resultados");
+        count.setText(String.valueOf(shownApps.size()));
+        chipsScroll.setAlpha(q.isEmpty() ? 1f : 0.35f);
         adapter.notifyDataSetChanged();
+    }
+
+    /** Categorías con al menos una app, en el orden de Categories.IDS, con "Todas" primero */
+    private List<String> visibleCategories() {
+        List<String> ids = new ArrayList<>();
+        ids.add(Categories.ALL);
+        for (String id : Categories.IDS) {
+            for (AppEntry app : allApps) {
+                if (app.category.equals(id)) {
+                    ids.add(id);
+                    break;
+                }
+            }
+        }
+        return ids;
+    }
+
+    private void renderChips() {
+        List<String> ids = visibleCategories();
+        if (!ids.contains(currentCategory)) currentCategory = Categories.ALL;
+        chips.removeAllViews();
+        for (String id : ids) {
+            TextView chip = new TextView(this);
+            chip.setText(Categories.label(id));
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            chip.setTextColor(getColorStateList(R.color.chip_text));
+            chip.setBackgroundResource(R.drawable.bg_chip);
+            chip.setPadding(dp(14), dp(7), dp(14), dp(7));
+            chip.setSelected(id.equals(currentCategory));
+            chip.setTag(id);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.rightMargin = dp(8);
+            chip.setLayoutParams(lp);
+            chip.setOnClickListener(v -> selectCategory(id));
+            chips.addView(chip);
+        }
+    }
+
+    private void selectCategory(String id) {
+        if (search.length() > 0) resetSearch();
+        if (id.equals(currentCategory)) return;
+        currentCategory = id;
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(KEY_CATEGORY, id).apply();
+        for (int i = 0; i < chips.getChildCount(); i++) {
+            View chip = chips.getChildAt(i);
+            chip.setSelected(id.equals(chip.getTag()));
+            if (chip.isSelected()) {
+                chipsScroll.post(() -> ((android.widget.HorizontalScrollView) chipsScroll)
+                        .smoothScrollTo(Math.max(0, chip.getLeft() - dp(40)), 0));
+            }
+        }
+        grid.setAlpha(0f);
+        filter("");
+        grid.setSelection(0);
+        grid.animate().alpha(1f).setDuration(180).start();
+    }
+
+    private void stepCategory(int delta) {
+        List<String> ids = visibleCategories();
+        int i = ids.indexOf(currentCategory) + delta;
+        if (i < 0 || i >= ids.size()) return;
+        selectCategory(ids.get(i));
+    }
+
+    private void moveToCategory(AppEntry app, String id) {
+        app.category = id;
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(KEY_CAT_PREFIX + app.id, id).apply();
+        renderChips();
+        filter(search.getText().toString());
+        Toast.makeText(this, app.label + " → " + Categories.title(id), Toast.LENGTH_SHORT).show();
+    }
+
+    private static boolean isOver(View view, MotionEvent ev) {
+        int[] pos = new int[2];
+        view.getLocationOnScreen(pos);
+        float x = ev.getRawX(), y = ev.getRawY();
+        return x >= pos[0] && x <= pos[0] + view.getWidth() && y >= pos[1] && y <= pos[1] + view.getHeight();
     }
 
     private void launch(AppEntry app, View from) {
@@ -314,11 +424,21 @@ public class MainActivity extends Activity {
         PopupMenu menu = new PopupMenu(new ContextThemeWrapper(this, R.style.PopupTheme), anchor);
         boolean pinned = dock.contains(app.id);
         menu.getMenu().add(Menu.NONE, 1, 1, pinned ? "Quitar del dock" : "Fijar en el dock");
-        menu.getMenu().add(Menu.NONE, 2, 2, "Información de la app");
-        menu.getMenu().add(Menu.NONE, 3, 3, "Desinstalar");
+        android.view.SubMenu move = menu.getMenu().addSubMenu(Menu.NONE, 4, 2, "Mover a categoría…");
+        for (int i = 0; i < Categories.IDS.length; i++) {
+            android.view.MenuItem it = move.add(Menu.NONE, 100 + i, i, Categories.LABELS[i]);
+            it.setCheckable(true).setChecked(Categories.IDS[i].equals(app.category));
+        }
+        menu.getMenu().add(Menu.NONE, 2, 3, "Información de la app");
+        menu.getMenu().add(Menu.NONE, 3, 4, "Desinstalar");
         menu.setOnMenuItemClickListener(item -> {
             String pkg = app.info.getComponentName().getPackageName();
-            switch (item.getItemId()) {
+            int itemId = item.getItemId();
+            if (itemId >= 100 && itemId < 100 + Categories.IDS.length) {
+                moveToCategory(app, Categories.IDS[itemId - 100]);
+                return true;
+            }
+            switch (itemId) {
                 case 1:
                     if (pinned) dock.remove(app.id);
                     else if (dock.size() >= DOCK_MAX) {
@@ -413,6 +533,7 @@ public class MainActivity extends Activity {
         final String id;
         final String label;
         final String key;
+        String category;
         private Drawable icon;
 
         AppEntry(LauncherActivityInfo info) {
