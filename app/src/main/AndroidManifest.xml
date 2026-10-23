@@ -4,6 +4,8 @@
     <!-- Deslizar hacia abajo para ver notificaciones, y desinstalar desde el menú -->
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- Panel UltraPC: datos del servidor -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Para listar las apps instaladas (Android 11+) -->
     <queries>
@@ -34,5 +36,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".PanelActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:screenOrientation="portrait" />
     </application>
 </manifest>

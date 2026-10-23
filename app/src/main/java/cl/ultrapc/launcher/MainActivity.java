@@ -186,6 +186,11 @@ public class MainActivity extends Activity {
                 if (e1 == null) return false;
                 float dx = e2.getX() - e1.getX();
                 float dy = e2.getY() - e1.getY();
+                // Deslizar el encabezado hacia la izquierda abre el Panel UltraPC
+                if (dx < -150 && Math.abs(vx) > Math.abs(vy) * 1.5f && isOver(findViewById(R.id.header), e1)) {
+                    openPanel();
+                    return true;
+                }
                 if (Math.abs(dx) > 150 && Math.abs(vx) > Math.abs(vy) * 1.5f
                         && search.length() == 0 && isOver(grid, e1)) {
                     stepCategory(dx < 0 ? 1 : -1);
@@ -198,6 +203,8 @@ public class MainActivity extends Activity {
                 return false;
             }
         });
+
+        findViewById(R.id.brandTag).setOnClickListener(v -> openPanel());
 
         applyClockGradient(findViewById(R.id.clock));
 
@@ -249,6 +256,11 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         resetSearch();
+    }
+
+    private void openPanel() {
+        startActivity(new Intent(this, PanelActivity.class));
+        overridePendingTransition(android.R.anim.slide_in_left, android.R.anim.fade_out);
     }
 
     private void updateGreeting() {

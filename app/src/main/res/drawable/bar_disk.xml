@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Barra del disco: el color se cambia por código según el nivel (como el widget: azul / naranja / rojo) -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@android:id/background">
+        <shape>
+            <solid android:color="#33FFFFFF" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+    <item android:id="@android:id/progress">
+        <scale android:scaleWidth="100%">
+            <shape>
+                <gradient android:startColor="#087CFF" android:endColor="#003EB2" />
+                <corners android:radius="6dp" />
+            </shape>
+        </scale>
+    </item>
+</layer-list>
